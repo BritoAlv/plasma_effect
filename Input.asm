@@ -7,7 +7,6 @@ int  10h
 push 0xA000   ; start of video address
 pop  es
 
-call fix_vga_palette
 
 gameLoop:
     mov bx, 0
@@ -17,6 +16,7 @@ gameLoop:
         cmp al, 32
         jne time_delay
     push bx
+    call modify_vga_palette
     call draw_frame
     pop  bx
     inc  bx
@@ -124,6 +124,7 @@ get_coordinate_distance:
         ret
 
 ;[ Input di = number, Output ax = root]
+; this uses Newton method.
 get_sqrt:
     cmp di, 0
     jz end_sqrt
@@ -145,96 +146,26 @@ get_sqrt:
         ret
 
 
-fix_vga_palette:
-    mov al, 1
-    mov dx, 0x3c8
-    out dx, al
-
+modify_vga_palette:
+    pusha
     mov dx, 0x3c9
-
-    mov ah, 255
-    mov bl, 0
-
-    mov cx, 84
-
-    plasma_rg_loop:
-    sub  ah, 3
-    add  bl, 3
-    mov  al, ah
-    inc  al
-    shr  al, 1
-    shr  al, 1
-    dec  al
-    out  dx, al
-    mov  al, bl
-    inc  al
-    shr  al, 1
-    shr  al, 1
-    dec  al
-    out  dx, al
-    xor  al, al
-    out  dx, al
-    loop plasma_rg_loop
-
-    sub ah, 3
-    add bl, 3
-
-    xor al, al
-    out dx, al
-    mov al, 63
-    out dx, al
-    xor al, al
-    out dx, al
-
-    mov cx, 84
-
-    plasma_gb_loop:
-    add  ah, 3
-    sub  bl, 3
-    xor  al, al
-    out  dx, al
-    mov  al, bl
-    inc  al
-    shr  al, 1
-    shr  al, 1
-    dec  al
-    out  dx, al
-    mov  al, ah
-    inc  al
-    shr  al, 1
-    shr  al, 1
-    dec  al
-    out  dx, al
-    loop plasma_gb_loop
-
-    mov ah, 63
-    sub bl, 3
-
-    xor al, al
-    out dx, al
-    out dx, al
-    mov al, ah
-    out dx, al
-
-    mov cx, 84
-
-    plasma_bw_loop:
-    add  bl, 3
-    mov  al, bl
-    inc  al
-    shr  al, 1
-    shr  al, 1
-    dec  al
-    out  dx, al
-    out  dx, al
-    mov  al, ah
-    out  dx, al
-    loop plasma_bw_loop
-
-    mov al, ah
-    out dx, al
-    out dx, al
-    out dx, al
+    mov cx, 255
+    set_colors_loop:
+        mov di, cx
+        shr di, 2
+        add di, bx
+        and di, 63
+        mov al, [precomputed_sine_table + di]
+        add al, bl
+        out dx, al
+        shr al, 1
+        add al, bl
+        out dx, al
+        shr al, 1
+        add al, bl
+        out dx, al
+        loop set_colors_loop   
+    popa
     ret
 
 
@@ -244,6 +175,8 @@ game_end:
 
 section.data:
     precomputed_sine_table:    db 63,69,75,81,87,93,98,103,108,112,116,119,122,124,125,126,127,126,125,124,122,119,116,112,108,103,98,93,87,81,75,69,63,57,51,45,39,33,28,23,18,14,10,7,4,2,1,0,0,0,1,2,4,7,10,14,18,23,28,33,39,45,51,57,
-    precomputed_time_function: db 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
+    precomputed_time_function: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225,0,33,68,105,144,185,228,17,64,113,164,217,16,73,132,193 ,193,132,73,16,217,164,113,64,17,228,185,144,105,68,33,0,225,196,169,144,121,100,81,64,49,36,25,16,9,4,1
+
+
 times 510 - ($ - $$) db 0
 dw 0xaa55
