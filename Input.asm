@@ -15,9 +15,9 @@ gameLoop:
     mov bx, 0
     time_delay:
         zeroit ah
-        int 0x16
-        cmp al, 32
-        je  execute_action
+        int    0x16
+        cmp    al, 32
+        je     execute_action
 
         action1:        
             mov dx, [point1]
@@ -89,17 +89,17 @@ gameLoop:
 ; [Inputs: bl = offset for time]
 draw_frame:
     zeroit di
-    mov dx, 200
+    mov    dx, 200
     line_loop:
         mov cx, 320
         pixel_loop:
             zeroit ax
-            push di
-            call get_color
-            pop  di
+            push   di
+            call   get_color
+            pop    di
             stosb
-            loop pixel_loop
-            dec  dx
+            loop   pixel_loop
+            dec    dx
         jnz line_loop
 
 get_color:
@@ -110,17 +110,17 @@ get_color:
 
     zeroit di
     
-    mov  bx, cx
-    zeroit  ax
-    mov  al, byte [point1+1]
-    call get_coordinate_distance
-    add  di, ax
-
-    mov  bx, dx
+    mov    bx, cx
     zeroit ax
-    mov  al, byte [point1]
-    call get_coordinate_distance
-    add  di, ax
+    mov    al, byte [point1+1]
+    call   get_coordinate_distance
+    add    di, ax
+
+    mov    bx, dx
+    zeroit ax
+    mov    al, byte [point1]
+    call   get_coordinate_distance
+    add    di, ax
 
     call get_sqrt
 
@@ -130,33 +130,33 @@ get_color:
 
 
     ; I have at ax sqrt
-    push di
-    mov  di, bx
-    add  ax, [precomputed_time_function + di]
-    pop  di
-    mov  di, ax
-    and  di, 63
+    push   di
+    mov    di, bx
+    add    ax, [precomputed_time_function + di]
+    pop    di
+    mov    di, ax
+    and    di, 63
     zeroit al
-    add  al, [precomputed_sine_table + di]
+    add    al, [precomputed_sine_table + di]
 
     ; function 2: sin( sqrt( ( x - 140)^2 + (y-20)^2 ) + time )
-    push ax
-    push bx
-    push cx
-    push dx
+    push   ax
+    push   bx
+    push   cx
+    push   dx
     zeroit di
 
-    mov  bx, cx
+    mov    bx, cx
     zeroit ax
-    mov  al, byte [point2+1]
-    call get_coordinate_distance
-    add  di, ax
+    mov    al, byte [point2+1]
+    call   get_coordinate_distance
+    add    di, ax
 
-    mov  bx, dx
+    mov    bx, dx
     zeroit ax
-    mov  al, byte [point2]
-    call get_coordinate_distance
-    add  di, ax
+    mov    al, byte [point2]
+    call   get_coordinate_distance
+    add    di, ax
 
     call get_sqrt
     
@@ -197,16 +197,16 @@ get_sqrt:
     jz  end_sqrt
     mov ax, 255
     start_loop:
-        mov bx, ax
-        zeroit dx     ; due to the division.
-        mov ax, di
-        div bx
-        add ax, bx
-        shr ax, 1
-        mov cx, ax
-        sub cx, bx
-        cmp cx, 2
-        ja  start_loop
+        mov    bx, ax
+        zeroit dx         ; due to the division.
+        mov    ax, di
+        div    bx
+        add    ax, bx
+        shr    ax, 1
+        mov    cx, ax
+        sub    cx, bx
+        cmp    cx, 2
+        ja     start_loop
         ret
     end_sqrt:
         mov ax, 0
@@ -217,21 +217,36 @@ modify_vga_palette:
     mov dx, 0x3c9
     mov cx, 255
     set_colors_loop:
-        mov  di, cx
-        shr  di, 2
-        add  di, bx
-        and  di, 63
-        mov  al, [precomputed_sine_table + di]
-        add  al, bl
-        out  dx, al
-        shr  al, 1
-        add  al, bl
-        out  dx, al
-        shr  al, 1
-        add  al, bl
-        out  dx, al
+        ; red channel
+        mov  bh, [color1r]
+        mov  bl, [color2r]
+        call set_color
+
+        mov  bh, [color1g]
+        mov  bl, [color2g]
+        call set_color
+
+        mov  bh, [color1b]
+        mov  bl, [color2b]
+        call set_color
+
         loop set_colors_loop
     popa
+    ret
+
+set_color:
+    zeroit ax
+    mov    al, bh
+    mul    cl
+    mov    di, ax
+    zeroit ax
+    mov    ah, bl
+    add    di, ax
+    mul    cl
+    sub    di, ax
+    mov    ax, di
+    shr    ax, 8
+    out    dx, al
     ret
 
 game_end:
@@ -243,6 +258,14 @@ section.data:
     precomputed_time_function: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225,0,33,68,105,144,185,228,17,64,113,164,217,16,73,132,193 ,193,132,73,16,217,164,113,64,17,228,185,144,105,68,33,0,225,196,169,144,121,100,81,64,49,36,25,16,9,4,1
     point1:                    dw 0xB4B4
     point2:                    dw 0x8C14
+
+    color1r: db 0x00
+    color1g: db 0xbb
+    color1b: db 0xaa
+
+    color2r: db 0x00
+    color2g: db 0xaa
+    color2b: db 0xa0
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
