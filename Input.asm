@@ -14,71 +14,65 @@ gameLoop:
         xor ah, ah
         int 0x16
         cmp al, 32
-        je execute_action
+        je  execute_action
 
         action1:        
-        cmp al, 119
-        jne action2
-        mov al, [point1x]
-        inc al
-        mov [point1x], al
-        jmp execute_action
+            mov dx, [point1]
+            cmp al, 119
+            jne .branch1
+            inc dh
+            jmp .done
+            .branch1:
+            cmp al, 115
+            jne .branch2
+            dec dh
+            jmp .done
 
-        action2:
-        cmp al, 115
-        jne action3
-        mov al, [point1x]
-        dec al
-        mov [point1x], al
-        jmp execute_action
+            .branch2:
+            cmp al, 97
+            jne .branch3
+            inc dl
+            jmp .done
 
-        action3:
-        cmp al, 97
-        jne action4
-        mov al, [point1y]
-        inc al
-        mov [point1y], al
-        jmp execute_action
+            .branch3:
+            cmp al, 100
+            jne action2
+            dec dl
+            jmp .done
 
-        action4:
-        cmp al, 100
-        jne saction1
-        mov al, [point1y]
-        dec al
-        mov [point1y], al
-        jmp execute_action
+            .done:
+                mov [point1], dx
+                jmp execute_action
 
-        saction1:        
-        cmp al, 105
-        jne saction2
-        mov al, [point2x]
-        inc al
-        mov [point2x], al
-        jmp execute_action
+        action2:        
+            mov dx, [point2]
+            cmp al, 105
+            jne .branch1
+            inc dh
+            jmp .done
+            .branch1:
+            cmp al, 107
+            jne .branch2
+            dec dh
+            jmp .done
 
-        saction2:
-        cmp al, 107
-        jne saction3
-        mov al, [point2x]
-        dec al
-        mov [point2x], al
-        jmp execute_action
+            .branch2:
+            cmp al, 106
+            jne .branch3
+            inc dl
+            jmp .done
 
-        saction3:
-        cmp al, 106
-        jne saction4
-        mov al, [point2y]
-        inc al
-        mov [point2y], al
-        jmp execute_action
+            .branch3:
+            cmp al, 108
+            jne end
+            dec dl
+            jmp .done
 
-        saction4:
-        cmp al, 108
-        jne time_delay
-        mov al, [point2y]
-        dec al
-        mov [point2y], al
-        jmp execute_action
+            .done:
+                mov [point2], dx
+                jmp execute_action
+
+    end: 
 
     execute_action:
         push bx
@@ -114,14 +108,14 @@ get_color:
     xor di, di
     
     mov  bx, cx
-    xor ax, ax
-    mov  al, [point1x]
+    xor  ax, ax
+    mov  al, byte [point1+1]
     call get_coordinate_distance
     add  di, ax
 
     mov  bx, dx
-    xor ax, ax
-    mov  al, [point1y]
+    xor  ax, ax
+    mov  al, byte [point1]
     call get_coordinate_distance
     add  di, ax
 
@@ -151,13 +145,13 @@ get_color:
 
     mov  bx, cx
     xor  ax, ax
-    mov  al, [point2x]
+    mov  al, byte [point2+1]
     call get_coordinate_distance
     add  di, ax
 
     mov  bx, dx
     xor  ax, ax
-    mov  al, [point2y]
+    mov  al, byte [point2]
     call get_coordinate_distance
     add  di, ax
 
@@ -244,11 +238,8 @@ game_end:
 section.data:
     precomputed_sine_table:    db 63,69,75,81,87,93,98,103,108,112,116,119,122,124,125,126,127,126,125,124,122,119,116,112,108,103,98,93,87,81,75,69,63,57,51,45,39,33,28,23,18,14,10,7,4,2,1,0,0,0,1,2,4,7,10,14,18,23,28,33,39,45,51,57,
     precomputed_time_function: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225,0,33,68,105,144,185,228,17,64,113,164,217,16,73,132,193 ,193,132,73,16,217,164,113,64,17,228,185,144,105,68,33,0,225,196,169,144,121,100,81,64,49,36,25,16,9,4,1
-    point1x:                   db 180
-    point1y:                   db 180
-
-    point2x: db 140
-    point2y: db 20
+    point1:                    dw 0xB4B4
+    point2:                    dw 0x8C14
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
