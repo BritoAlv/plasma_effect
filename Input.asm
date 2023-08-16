@@ -75,7 +75,8 @@ gameLoop:
                 mov [point2], dx
                 jmp execute_action
 
-    end: 
+    end:
+        jmp time_delay 
 
     execute_action:
         push bx
@@ -128,12 +129,8 @@ get_color:
     pop cx
     pop bx
 
-
     ; I have at ax sqrt
-    push   di
-    mov    di, bx
-    add    ax, [precomputed_time_function + di]
-    pop    di
+    add    ax, bx
     mov    di, ax
     and    di, 63
     zeroit al
@@ -164,10 +161,7 @@ get_color:
     pop  cx
     pop  bx
     ; I have at ax sqrt
-    push di
-    mov  di, bx
-    add  ax, [precomputed_time_function + di]
-    pop  di
+    add  ax, bx
     mov  di, ax
     and  di, 63
     pop  ax                                   ; restore al
@@ -254,8 +248,7 @@ game_end:
     hlt
 
 section.data:
-    precomputed_sine_table:    db 63,69,75,81,87,93,98,103,108,112,116,119,122,124,125,126,127,126,125,124,122,119,116,112,108,103,98,93,87,81,75,69,63,57,51,45,39,33,28,23,18,14,10,7,4,2,1,0,0,0,1,2,4,7,10,14,18,23,28,33,39,45,51,57,
-    precomputed_time_function: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225,0,33,68,105,144,185,228,17,64,113,164,217,16,73,132,193 ,193,132,73,16,217,164,113,64,17,228,185,144,105,68,33,0,225,196,169,144,121,100,81,64,49,36,25,16,9,4,1
+    precomputed_sine_table:    db 63,69,75,81,87,93,98,103,108,112,116,119,122,124,125,126,127,126,125,124,122,119,116,112,108,103,98,93,87,81,75,69,63,57,51,45,39,33,28,23,18,14,10,7,4,2,1,0,0,0,1,2,4,7,10,14,18,23,28,33,39,45,51,57
     point1:                    dw 0xB4B4
     point2:                    dw 0x8C14
 
@@ -263,7 +256,7 @@ section.data:
     color1g: db 0xbb
     color1b: db 0xaa
 
-    color2r: db 0x00
+    color2r: db 0xcc
     color2g: db 0xaa
     color2b: db 0xa0
 
