@@ -7,11 +7,14 @@ int  10h
 push 0xA000   ; start of video address
 pop  es
 
+%macro zeroit 1
+    xor %1, %1
+%endmacro
 
 gameLoop:
     mov bx, 0
     time_delay:
-        xor ah, ah
+        zeroit ah
         int 0x16
         cmp al, 32
         je  execute_action
@@ -85,12 +88,12 @@ gameLoop:
 
 ; [Inputs: bl = offset for time]
 draw_frame:
-    xor di, di
+    zeroit di
     mov dx, 200
     line_loop:
         mov cx, 320
         pixel_loop:
-            xor  ax, ax
+            zeroit ax
             push di
             call get_color
             pop  di
@@ -105,16 +108,16 @@ get_color:
     push cx
     push dx
 
-    xor di, di
+    zeroit di
     
     mov  bx, cx
-    xor  ax, ax
+    zeroit  ax
     mov  al, byte [point1+1]
     call get_coordinate_distance
     add  di, ax
 
     mov  bx, dx
-    xor  ax, ax
+    zeroit ax
     mov  al, byte [point1]
     call get_coordinate_distance
     add  di, ax
@@ -133,7 +136,7 @@ get_color:
     pop  di
     mov  di, ax
     and  di, 63
-    xor  al, al
+    zeroit al
     add  al, [precomputed_sine_table + di]
 
     ; function 2: sin( sqrt( ( x - 140)^2 + (y-20)^2 ) + time )
@@ -141,16 +144,16 @@ get_color:
     push bx
     push cx
     push dx
-    xor  di, di
+    zeroit di
 
     mov  bx, cx
-    xor  ax, ax
+    zeroit ax
     mov  al, byte [point2+1]
     call get_coordinate_distance
     add  di, ax
 
     mov  bx, dx
-    xor  ax, ax
+    zeroit ax
     mov  al, byte [point2]
     call get_coordinate_distance
     add  di, ax
@@ -195,7 +198,7 @@ get_sqrt:
     mov ax, 255
     start_loop:
         mov bx, ax
-        xor dx, dx     ; due to the division.
+        zeroit dx     ; due to the division.
         mov ax, di
         div bx
         add ax, bx
