@@ -84,16 +84,9 @@ get_color:
     pop bx
 
     ; I have at ax sqrt    
-    push bx
-    push ax
-    mov  ax, bx
-    mul  bl
-    mov  bx, ax
-    pop  ax
-    add  ax, bx
-    pop  bx
     mov  di, ax
-    and  di, 63
+    add di, bx
+    and  di, 0x3F
     xor  al, al
     add  al, [precomputed_sine_table + di]
 
@@ -123,18 +116,29 @@ get_color:
     pop bx
     ; I have at ax sqrt
     
-    push bx
-    push ax
-    mov  ax, bx
-    mul  bl
-    mov  bx, ax
-    pop  ax
-    add  ax, bx
-    pop  bx
     mov  di, ax
-    and  di, 63
+    add di, bx
+    and  di, 0x3F
     pop  ax                                ; restore al
     add  al, [precomputed_sine_table + di] ; mod it
+    
+    ; function 3: sin( 2x+y + time)
+    mov di, cx
+    shl di, 1
+    add di, dx
+    add di, bx
+    and di, 0x3F
+    add al, [precomputed_sine_table + di]
+    
+    ; function 4: sin( 2y - x + time)
+    mov di, dx
+    shl di, 1
+    sub di, dx
+    add di, bx
+    and di, 0x3F
+    add al, [precomputed_sine_table + di]
+
+
     
     inc al
     ret
@@ -226,7 +230,8 @@ set_color_loop:
 
 
 section.data:
-    precomputed_sine_table: db 63,69,75,81,87,93,98,103,108,112,116,119,122,124,125,126,127,126,125,124,122,119,116,112,108,103,98,93,87,81,75,69,63,57,51,45,39,33,28,23,18,14,10,7,4,2,1,0,0,0,1,2,4,7,10,14,18,23,28,33,39,45,51,57
+    ; 64 values between 0 and 64 to be used for four functions
+    precomputed_sine_table: db 32,35,38,41,44,47,49,52,54,56,58,60,61,62,63,63,64,63,63,62,61,60,58,56,54,52,49,47,44,41,38,35,31,28,25,22,19,16,14,11,9,7,5,3,2,1,0,0,0,0,0,1,2,3,5,7,9,11,14,16,19,22,25,28,
     point1:                 dw 0xB4B4
     point2:                 dw 0x8C14
 
