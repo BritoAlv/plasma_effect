@@ -1,21 +1,16 @@
 use16
 
 color1red   equ 255
-color1green equ 0
-color1blue  equ 0
+color1green equ 103
+color1blue  equ 36
 
-color2red   equ 0
-color2green equ 0
+color2red   equ 45
+color2green equ 23
 color2blue  equ 255
 
-color3red   equ 0
+color3red   equ 65
 color3green equ 255
-color3blue  equ 0
-
-color4red   equ 255
-color4green equ 255
-color4blue  equ 0
-
+color3blue  equ 49
 
 ; start in VGA Mode
 mov  ax, 0x13
@@ -24,7 +19,7 @@ int  10h
 push 0xA000             ; start of video address
 pop  es
 
-call modify_vga_palette
+
 
 gameLoop:
     mov bx, 0
@@ -32,77 +27,20 @@ gameLoop:
         xor ah, ah
         int 0x16
         cmp al, 32
-        je  execute_action
-
-        action1:        
-            mov dx, [point1]
-            cmp al, 119
-            jne .branch1
-            inc dh
-            jmp .done
-            .branch1:
-            cmp al, 115
-            jne .branch2
-            dec dh
-            jmp .done
-
-            .branch2:
-            cmp al, 97
-            jne .branch3
-            inc dl
-            jmp .done
-
-            .branch3:
-            cmp al, 100
-            jne action2
-            dec dl
-            jmp .done
-
-            .done:
-                mov [point1], dx
-                jmp execute_action
-
-        action2:        
-            mov dx, [point2]
-            cmp al, 105
-            jne .branch1
-            inc dh
-            jmp .done
-            .branch1:
-            cmp al, 107
-            jne .branch2
-            dec dh
-            jmp .done
-
-            .branch2:
-            cmp al, 106
-            jne .branch3
-            inc dl
-            jmp .done
-
-            .branch3:
-            cmp al, 108
-            jne end
-            dec dl
-            jmp .done
-
-            .done:
-                mov [point2], dx
-                jmp execute_action
-
-    end:
-        jmp time_delay
+        jne time_delay
 
     execute_action:
         push bx
+        call modify_vga_palette
         call draw_frame
         pop  bx
         inc  bx
-        and  bx, 0x3F
+        and  bx, 0xFF
         jmp  time_delay
 
 ; [Inputs: bl = offset for time]
 draw_frame:
+    pusha
     xor di, di
     mov dx, 200
     line_loop:
@@ -116,6 +54,8 @@ draw_frame:
             loop pixel_loop
             dec  dx
         jnz line_loop
+    popa
+    ret        
 
 get_color:
     ; function 1: sin(  sqrt( ( x - 180)^2 + (y-180)^2 ) + time )
@@ -143,12 +83,19 @@ get_color:
     pop cx
     pop bx
 
-    ; I have at ax sqrt
-    add ax, bx
-    mov di, ax
-    and di, 63
-    xor al, al
-    add al, [precomputed_sine_table + di]
+    ; I have at ax sqrt    
+    push bx
+    push ax
+    mov  ax, bx
+    mul  bl
+    mov  bx, ax
+    pop  ax
+    add  ax, bx
+    pop  bx
+    mov  di, ax
+    and  di, 63
+    xor  al, al
+    add  al, [precomputed_sine_table + di]
 
     ; function 2: sin( sqrt( ( x - 140)^2 + (y-20)^2 ) + time )
     push ax
@@ -175,11 +122,19 @@ get_color:
     pop cx
     pop bx
     ; I have at ax sqrt
-    add ax, bx
-    mov di, ax
-    and di, 63
-    pop ax                                ; restore al
-    add al, [precomputed_sine_table + di] ; mod it
+    
+    push bx
+    push ax
+    mov  ax, bx
+    mul  bl
+    mov  bx, ax
+    pop  ax
+    add  ax, bx
+    pop  bx
+    mov  di, ax
+    and  di, 63
+    pop  ax                                ; restore al
+    add  al, [precomputed_sine_table + di] ; mod it
     
     inc al
     ret
@@ -223,14 +178,11 @@ get_sqrt:
 modify_vga_palette:
     pusha
     mov  dx, 0x3c9
-    mov  cx, 85
+    mov  cx, 128
     mov  di, colors
     call set_color_loop
     add  di, 3
-    mov  cx, 86
-    call set_color_loop
-    add  di, 3
-    mov  cx, 85
+    mov  cx, 128
     call set_color_loop
     popa
     ret
@@ -242,11 +194,11 @@ set_color:
     mov al, bh
     mul cl
     mov di, ax
-    mov ax, 86
+    mov ax, 128
     sub ax, cx
     mul bl
     add ax, di
-    shr ax, 10
+    shr ax, 9
     out dx, al
     popa
     ret
@@ -278,7 +230,7 @@ section.data:
     point1:                 dw 0xB4B4
     point2:                 dw 0x8C14
 
-    colors: db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue, color4red, color4green, color4blue
+    colors: db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue
 
 
 times 510 - ($ - $$) db 0

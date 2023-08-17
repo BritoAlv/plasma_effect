@@ -1,20 +1,20 @@
 use16
 
-color1red equ 0
-color1green equ 255
-color1blue equ 0
+color1red   equ 255
+color1green equ 103
+color1blue  equ 0
 
-color2red equ 255
-color2green equ 0
-color2blue equ 0
+color2red   equ 0
+color2green equ 23
+color2blue  equ 255
 
-color3red equ 0
-color3green equ 0
-color3blue equ 255
+color3red   equ 0
+color3green equ 255
+color3blue  equ 49
 
-color4red equ 255
+color4red   equ 255
 color4green equ 255
-color4blue equ 0
+color4blue  equ 0
 
 
 ; start in VGA Mode
@@ -74,7 +74,7 @@ set_color:
     sub    ax, cx
     mul    bl
     add    ax, di
-    shr    ax, 10
+    shr    ax, 9
     out    dx, al
     popa
     ret
