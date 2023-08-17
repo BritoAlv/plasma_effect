@@ -1,8 +1,21 @@
 use16
 
-%macro zeroit 1
-    xor %1, %1
-%endmacro
+color1red equ 0
+color1green equ 255
+color1blue equ 0
+
+color2red equ 255
+color2green equ 0
+color2blue equ 0
+
+color3red equ 0
+color3green equ 0
+color3blue equ 255
+
+color4red equ 255
+color4green equ 255
+color4blue equ 0
+
 
 ; start in VGA Mode
 mov  ax, 0x13
@@ -37,82 +50,63 @@ draw_frame:
 
 fix_vga_palette:
     pusha
-
     mov dx, 0x3c9
-    mov cx, 128
-    set_colors_loop1:
-        ; red channel
-        mov  bh, [color1r]
-        mov  bl, [color2r]
-        call set_color
-
-        mov  bh, [color1g]
-        mov  bl, [color2g]
-        call set_color
-
-        mov  bh, [color1b]
-        mov  bl, [color2b]
-        call set_color
-        
-        dec cx
-        cmp cx, 0
-        jne set_colors_loop1
-
-
-    mov cx, 128
-    set_colors_loop2:
-        ; red channel
-        mov  bh, [color2r]
-        mov  bl, [color3r]
-        call set_color
-
-        mov  bh, [color2g]
-        mov  bl, [color3g]
-        call set_color
-
-        mov  bh, [color2b]
-        mov  bl, [color3b]
-        call set_color
-        
-        dec cx
-        cmp cx, 0
-        jne set_colors_loop2
-
-
-
+    mov di, colors
+    mov cx, 85
+    call set_color_loop
+    add di, 3
+    mov cx, 86
+    call set_color_loop
+    add di, 3
+    mov cx, 85
+    call set_color_loop
     popa
     ret
 
+
 set_color:
-    zeroit ax
+    pusha 
+    xor ax, ax
     mov    al, bh
     mul    cl
     mov    di, ax
-    mov    ax, 128
+    mov    ax, 86
     sub    ax, cx
     mul    bl
     add    ax, di
     shr    ax, 10
     out    dx, al
+    popa
     ret
     
 game_end:
     cli
     hlt
 
+;[ Inputs cx = number_of_iterations, di = start_offset, 
+set_color_loop:
+    pusha
+    .looop:
+    mov  bh, [di]
+    mov  bl, [di+3]
+    call set_color
+    inc di
+    mov  bh, [di]
+    mov  bl, [di+3]
+    call set_color
+    inc di
+    mov  bh, [di]
+    mov  bl, [di+3]
+    call set_color
+    sub di, 2    
+    loop .looop
+    popa
+    ret
+
+
+
 section.data:
-
-    color1r: db 0xff
-    color1g: db 0x34
-    color1b: db 0x12
-
-    color2r: db 0xbb
-    color2g: db 0xff
-    color2b: db 0x00
-
-    color3r: db 0xbb
-    color3g: db 0xcc
-    color3b: db 0xdd
+    colors:  db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue, color4red, color4green, color4blue  
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
