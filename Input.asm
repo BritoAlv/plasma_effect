@@ -4,13 +4,13 @@ color1red   equ 255
 color1green equ 103
 color1blue  equ 36
 
-color2red   equ 45
+color2red   equ 60
 color2green equ 23
-color2blue  equ 255
+color2blue  equ 88
 
-color3red   equ 65
+color3red   equ 11
 color3green equ 255
-color3blue  equ 49
+color3blue  equ 120
 
 ; start in VGA Mode
 mov  ax, 0x13
@@ -22,7 +22,8 @@ pop  es
 
 
 gameLoop:
-    mov bx, 0
+    xor bx, bx
+    mov si, 85
     wait_space:
         xor ah, ah
         int 0x16
@@ -30,12 +31,11 @@ gameLoop:
         jne wait_space
 
     execute_action:
-        push bx
+        call modify_default_colors
         call modify_vga_palette
         call draw_frame
-        pop  bx
         inc  bx
-        and  bx, 0xFF
+        xor bh, bh
         jmp  wait_space
 
 ; [Inputs: bl = offset for time]
@@ -59,6 +59,8 @@ draw_frame:
 
 get_color:
     ; function 1: sin(  sqrt( ( x - 180)^2 + (y-180)^2 ) + time )
+    push si
+    mov si, 0x3f
     push bx
     push cx
     push dx
@@ -86,7 +88,7 @@ get_color:
     ; I have at ax sqrt    
     mov di, ax
     add di, bx
-    and di, 0x3F
+    and di, si
     xor al, al
     add al, [precomputed_sine_table + di]
 
@@ -118,39 +120,46 @@ get_color:
     
     mov di, ax
     add di, bx
-    and di, 0x3F
+    and di, si
     pop ax                                ; restore al
     add al, [precomputed_sine_table + di] ; mod it
     
-    ; function 3: sin( 2x+y + time)
-    mov di, cx
-    shl di, 1
+    ; function 3: sin( time*x+y)
+    push ax
+    mov ax, cx
+    mul bl
+    mov di, ax
+    pop ax
     add di, dx
     add di, bx
-    and di, 0x3F
+    and di, si
     add al, [precomputed_sine_table + di]
     
-    ; function 4: sin( 2y - x + time)
-    mov di, dx
-    shl di, 1
-    sub di, dx
-    add di, bx
-    and di, 0x3F
-    add al, [precomputed_sine_table + di]
+    ; function 4: sin( 1/2*y*x - x*time )
+    xor di, di
+    push ax
+    mov ax, cx
+    mul bl
+    add di, ax
 
 
+    mov ax, dx
+    mul bl
+    sub di, ax
+    pop ax
+    and  di, si
+    add  al, [precomputed_sine_table + di]
     
     inc al
+    pop si
     ret
+
 ;[Input bx = coordinate1, ax = coordinate2]
 ;[Output ax = (coordinate1 - coordinate2)^2]
 get_coordinate_distance:
     cmp bx, ax
     jge b1
-    sub ax, bx
-    mov bx, ax
-    mul bl
-    ret
+    xchg ax, bx
     b1:
         sub bx, ax
         mov ax, bx
@@ -160,9 +169,12 @@ get_coordinate_distance:
 ;[ Input di = number, Output ax = root]
 ; this uses Newton method.
 get_sqrt:
-    cmp di, 0
     jz  end_sqrt
-    mov ax, 255
+    ; equivalent to do mov ax, 255 but cheaper.
+    xor ah, ah
+    not al 
+    ;
+
     start_loop:
         mov bx, ax
         xor dx, dx     ; due to the division.
@@ -174,29 +186,90 @@ get_sqrt:
         sub cx, bx
         cmp cx, 2
         ja  start_loop
-        ret
     end_sqrt:
-        mov ax, 0
         ret
 
 modify_vga_palette:
     pusha
-    call modify_default_colors
-    mov dx, 0x3c8
-    xor al, al
-    out dx, al
-    inc dx
-    mov  cx, 128
+    mov  dx, 0x3c8
+    xor  al, al
+    out  dx, al
+    inc  dx
     mov  di, colors
+    mov  cx, si
     call set_color_loop
     add  di, 3
-    mov  cx, 128
+    mov  cx, si
+    inc cx
+    call set_color_loop
+    add di, 3
+    mov  cx, si
     call set_color_loop
     popa
     ret
 
 modify_default_colors:    
+    mov cx, 0
+    mov dx, 4
+    .loopp:
+        mov di, bx
+        cmp cl, dl
+        jg .branch
+            shl di, cl
+            sub di, bx
+            jmp .done_branch
+        .branch:
+            sub cl, dl
+            shr di, cl
+            add cl, dl
+            add di, bx
+        .done_branch:
+            and di, 0x3f
+            mov al, [precomputed_sine_table + di]
+            shl al, 2
+
+            mov di, cx
+            
+            mov ah, [colors+di] 
+            
+            ; old color in ah
+            ; new color in al
+
+            ; now mix them to obtain a new color, but not so different from the one in ah
+            push bx
+            mov dh, ah
+            
+            xor ah, ah
+            mul cl
+            mov bx, ax
+            mov al, 32
+            sub al, cl 
+            mul dh
+            add ax, bx
+            shr ax, 5
+            pop bx
+            mov [colors + di], al
+            inc cl
+            cmp cx, 9
+            jne .loopp
+
+    inc di
+    push bx
+    mov bx, colors
+    push si
+    xor si, si
+    mov cx, 3
+    rep call procedure
+    pop si
+    pop bx
     ret
+
+    procedure:
+        mov al, [si + bx]
+        mov [di + bx], al
+        inc di
+        inc si
+        ret
 
 set_color:
     pusha 
@@ -204,7 +277,8 @@ set_color:
     mov al, bh
     mul cl
     mov di, ax
-    mov ax, 128
+    mov ax, si
+    inc ax
     sub ax, cx
     mul bl
     add ax, di
@@ -213,35 +287,34 @@ set_color:
     popa
     ret
 
-game_end:
-    cli
-    hlt
 
 ;[ Inputs cx = number_of_iterations, di = start_offset, 
 set_color_loop:
-    mov  bh, [di]
-    mov  bl, [di+3]
-    call set_color
-    inc  di
-    mov  bh, [di]
-    mov  bl, [di+3]
-    call set_color
-    inc  di
-    mov  bh, [di]
-    mov  bl, [di+3]
-    call set_color
-    sub  di, 2
-    loop set_color_loop
+    push di
+    call sset_color_loop
+    call sset_color_loop
+    call sset_color_loop
+    pop di
+    loop set_color_loop    
     ret
+
+sset_color_loop:
+    mov  bh, [di]
+    mov  bl, [di+3]
+    call set_color
+    inc  di
+    ret    
 
 
 section.data:
     ; 64 values between 0 and 64 to be used for four functions
-    precomputed_sine_table: db 32,35,38,41,44,47,49,52,54,56,58,60,61,62,63,63,64,63,63,62,61,60,58,56,54,52,49,47,44,41,38,35,31,28,25,22,19,16,14,11,9,7,5,3,2,1,0,0,0,0,0,1,2,3,5,7,9,11,14,16,19,22,25,28,
+    precomputed_sine_table: db 32,35,38,41,44,47,49,52,54,56,58,60,61,62,63,63,64,63,63,62,61,60,58,56,54,52,49,47,44,41,38,35,31,28,25,22,19,16,14,11,9,7,5,3,2,1,0,0,0,0,0,1,2,3,5,7,9,11,14,16,19,22,25,28
     point1:                 dw 0xB4B4
     point2:                 dw 0x8C14
 
-    colors: db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue
+    colors: db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue, color1red, color1blue, color1green
+
+    parameters: db 0 
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
