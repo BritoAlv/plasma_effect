@@ -25,12 +25,27 @@ push 0xA000          ; start of video address
 pop  es
 
 
-call fix_vga_palette
 
 gameLoop:
-    call draw_frame
-    jmp  gameLoop
+    mov bx, 0
+    wait_space:
+        xor ah, ah
+        int 0x16
+        cmp al, 32
+        jne wait_space
 
+    execute_action:
+        push bx
+        call modify_default_colors
+        call fix_vga_palette
+        call draw_frame
+        pop  bx
+        inc  bx
+        and  bx, 0xFF
+        inc bx
+        jmp  wait_space
+
+    
 
 ; [Inputs: bl = offset for time]
 draw_frame:
@@ -50,7 +65,10 @@ draw_frame:
 
 fix_vga_palette:
     pusha
-    mov dx, 0x3c9
+    xor al, al
+    mov dx, 0x3c8
+    out dx, al
+    inc dx
     mov di, colors
     mov cx, 85
     call set_color_loop
@@ -103,9 +121,11 @@ set_color_loop:
     popa
     ret
 
-
+modify_default_colors:
+    ret
 
 section.data:
+    precomputed_sine_table: db 32,35,38,41,44,47,49,52,54,56,58,60,61,62,63,63,64,63,63,62,61,60,58,56,54,52,49,47,44,41,38,35,31,28,25,22,19,16,14,11,9,7,5,3,2,1,0,0,0,0,0,1,2,3,5,7,9,11,14,16,19,22,25,28
     colors:  db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue, color4red, color4green, color4blue  
 
 times 510 - ($ - $$) db 0

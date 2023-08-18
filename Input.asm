@@ -16,18 +16,18 @@ color3blue  equ 49
 mov  ax, 0x13
 int  10h
 
-push 0xA000             ; start of video address
+push 0xA000   ; start of video address
 pop  es
 
 
 
 gameLoop:
     mov bx, 0
-    time_delay:
+    wait_space:
         xor ah, ah
         int 0x16
         cmp al, 32
-        jne time_delay
+        jne wait_space
 
     execute_action:
         push bx
@@ -36,7 +36,7 @@ gameLoop:
         pop  bx
         inc  bx
         and  bx, 0xFF
-        jmp  time_delay
+        jmp  wait_space
 
 ; [Inputs: bl = offset for time]
 draw_frame:
@@ -84,11 +84,11 @@ get_color:
     pop bx
 
     ; I have at ax sqrt    
-    mov  di, ax
+    mov di, ax
     add di, bx
-    and  di, 0x3F
-    xor  al, al
-    add  al, [precomputed_sine_table + di]
+    and di, 0x3F
+    xor al, al
+    add al, [precomputed_sine_table + di]
 
     ; function 2: sin( sqrt( ( x - 140)^2 + (y-20)^2 ) + time )
     push ax
@@ -116,11 +116,11 @@ get_color:
     pop bx
     ; I have at ax sqrt
     
-    mov  di, ax
+    mov di, ax
     add di, bx
-    and  di, 0x3F
-    pop  ax                                ; restore al
-    add  al, [precomputed_sine_table + di] ; mod it
+    and di, 0x3F
+    pop ax                                ; restore al
+    add al, [precomputed_sine_table + di] ; mod it
     
     ; function 3: sin( 2x+y + time)
     mov di, cx
@@ -181,7 +181,11 @@ get_sqrt:
 
 modify_vga_palette:
     pusha
-    mov  dx, 0x3c9
+    call modify_default_colors
+    mov dx, 0x3c8
+    xor al, al
+    out dx, al
+    inc dx
     mov  cx, 128
     mov  di, colors
     call set_color_loop
@@ -191,6 +195,8 @@ modify_vga_palette:
     popa
     ret
 
+modify_default_colors:    
+    ret
 
 set_color:
     pusha 
@@ -236,7 +242,6 @@ section.data:
     point2:                 dw 0x8C14
 
     colors: db color1red, color1green, color1blue, color2red, color2green, color2blue, color3red, color3green, color3blue
-
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
