@@ -47,45 +47,41 @@ draw_frame:
 
 ;[Inputs : bl = time, cx = x, dx = y coordinates, si = 63]
 get_color:
-    ; function 1: sin(  sqrt( ( x - 180)^2 + (y-180)^2 ) + time )
-    ; /////////////// BEGIN //////////////////////////
     xor ax, ax
 
-    
     mov di, point1
     call .radial_wave
 
     mov di, point2
     call .radial_wave
 
-    ; function 3: sin( time*x+y)
-    push ax
-    mov ax, cx
-    mul bl
-    mov di, ax
-    pop ax
-    add di, dx
-    add di, bx
-    and di, si
-    add al, [precomputed_sine_table + di]
-    
-    ; function 4: sin( 1/2*y*x - x*time )
-    xor di, di
-    push ax
-    mov ax, cx
-    mul bl
-    add di, ax
+    mov di, params_f3
+    call .sine_wave
 
+    mov di, params_f4
+    call .sine_wave
 
-    mov ax, dx
-    mul bl
-    sub di, ax
-    pop ax
-    and  di, si
-    add  al, [precomputed_sine_table + di]
-    
-    inc al
     ret
+
+    .sine_wave:
+        push ax
+
+        mov ax, [di+1]
+        mul cl
+
+        push ax
+        mov ax, [di]
+        mul dl
+
+        pop di
+        add di, ax
+        add di, bx
+        and di, si 
+
+        pop ax
+        add al, [precomputed_sine_table + di]
+        ret
+
 
     .radial_wave:
         push ax
@@ -159,6 +155,7 @@ get_sqrt:
         ja  .start_loop
     .end_sqrt:
         ret
+
 
 modify_default_colors:    
     mov cx, 0
@@ -283,6 +280,8 @@ section.data:
     point2:                 dw 0x8C14
 
     colors: db 205, 103, 36, 60, 23, 88, 11, 255, 120, 205, 103, 36
+    params_f3: dw 0x0101
+    params_f4: dw 0x03a1
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
