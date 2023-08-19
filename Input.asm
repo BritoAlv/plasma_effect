@@ -52,6 +52,7 @@ get_color:
     mov di, point1
     call .radial_wave
 
+
     mov di, point2
     call .radial_wave
 
@@ -61,27 +62,31 @@ get_color:
     mov di, params_f4
     call .sine_wave
 
+    mov di, time_factor
+    call generate_random_number
+
     ret
 
     .sine_wave:
         push ax
-
         mov ax, [di+1]
         mul cl
-
         push ax
         mov ax, [di]
         mul dl
-
         pop di
         add di, ax
         add di, bx
+        push di
+        mov di, [time_factor]
+        and di, si
+        mov al, [precomputed_sine_table + di]
+        pop di
+        add di, ax
         and di, si 
-
         pop ax
         add al, [precomputed_sine_table + di]
         ret
-
 
     .radial_wave:
         push ax
@@ -114,6 +119,14 @@ get_color:
         ; I have at ax sqrt    
         mov di, ax
         add di, bx
+        
+        push di
+        mov di, [time_factor]
+        and di, si
+        mov al, [precomputed_sine_table + di]
+        pop di
+        
+        add di, ax
         and di, si
         
         pop ax
@@ -137,14 +150,10 @@ get_coordinate_distance:
 ; this uses Newton method.
 get_sqrt:
     jz  .end_sqrt
-    ; equivalent to do mov ax, 255 but cheaper.
-    xor ah, ah
-    not al 
-    ;
-
+    mov ax, 255 ; a nice guess 
     .start_loop:
         mov bx, ax
-        xor dx, dx     ; due to the division.
+        xor dx, dx ; due to the division.
         mov ax, di
         div bx
         add ax, bx
@@ -156,51 +165,43 @@ get_sqrt:
     .end_sqrt:
         ret
 
+;[ di = input address to write a random number]
+generate_random_number:
+    push bx
+    mov bx, [0x046c] ; start_state in di
+    mov [di], bl
+    pop bx
+    ret
 
 modify_default_colors:    
-    mov cx, 0
-    mov dx, 4
+    xor cx, cx
     .loopp:
-        mov di, bx
-        cmp cl, dl
-        jg .branch
-            shl di, cl
-            sub di, bx
-            jmp .done_branch
-        .branch:
-            sub cl, dl
-            shr di, cl
-            add cl, dl
-            add di, bx
-        .done_branch:
-            and di, 0x3f
-            mov al, [precomputed_sine_table + di]
-            shl al, 2
-
-            mov di, cx
-            
-            mov ah, [colors+di] 
-            
-            ; old color in ah
-            ; new color in al
-
-            ; now mix them to obtain a new color, but not so different from the one in ah
-            push bx
-            mov dh, ah
-            
-            xor ah, ah
-            mul cl
-            mov bx, ax
-            mov al, 32
-            sub al, cl 
-            mul dh
-            add ax, bx
-            shr ax, 5
-            pop bx
-            mov [colors + di], al
-            inc cl
-            cmp cx, 9
-            jne .loopp
+        mov di, color_param
+        call generate_random_number
+        mov di, [color_param]
+        shr di, cl   
+        and di, 0x3f
+        mov al, [precomputed_sine_table + di]
+        shl al, 2
+        mov di, cx
+        mov ah, [colors+di] 
+        
+        push bx
+        mov dh, ah
+        
+        xor ah, ah
+        mul cl
+        mov bx, ax
+        mov al, 32
+        sub al, cl 
+        mul dh
+        add ax, bx
+        shr ax, 5
+        pop bx
+        mov [colors + di], al
+        inc cl
+        cmp cl, 9
+        jne .loopp
 
     inc di
     push bx
@@ -230,12 +231,8 @@ modify_vga_palette:
     mov  di, colors
     mov  cx, si
     call set_color_loop
-    add  di, 3
-    mov  cx, si
     inc cx
     call set_color_loop
-    add di, 3
-    mov  cx, si
     call set_color_loop
     popa
     ret
@@ -247,7 +244,9 @@ set_color_loop:
     call .procedure
     call .procedure
     pop di
-    loop set_color_loop    
+    loop set_color_loop
+    add di, 3
+    mov  cx, si    
     ret
 
     .procedure:
@@ -282,6 +281,10 @@ section.data:
     colors: db 205, 103, 36, 60, 23, 88, 11, 255, 120, 205, 103, 36
     params_f3: dw 0x0101
     params_f4: dw 0x03a1
+
+    color_param: db 100
+
+    time_factor: db 1
 
 times 510 - ($ - $$) db 0
 dw 0xaa55
