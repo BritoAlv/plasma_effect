@@ -34,7 +34,6 @@ draw_frame:
     line_loop:
         mov cx, 320
         pixel_loop:
-            xor  ax, ax
             push di
             call get_color
             pop  di
@@ -52,7 +51,6 @@ get_color:
     mov di, point1
     call .radial_wave
 
-
     mov di, point2
     call .radial_wave
 
@@ -64,7 +62,6 @@ get_color:
 
     mov di, time_factor
     call generate_random_number
-
     ret
 
     .sine_wave:
@@ -93,46 +90,34 @@ get_color:
         push bx
         push cx
         push dx
-
         mov  bx, cx
         xor  ax, ax
         mov  al, [di+1]
         call get_coordinate_distance    
-        
         push ax
-
         mov  bx, dx
         xor  ax, ax
         mov  al, [di]
         call get_coordinate_distance
-        
         pop di
-        
         add di, ax
-
         call get_sqrt
-
         pop dx
         pop cx
         pop bx
-
         ; I have at ax sqrt    
         mov di, ax
         add di, bx
-        
         push di
         mov di, [time_factor]
         and di, si
         mov al, [precomputed_sine_table + di]
         pop di
-        
         add di, ax
-        and di, si
-        
+        and di, si        
         pop ax
         add al, [precomputed_sine_table + di]
         ret
-
 
 ;[Input bx = coordinate1, ax = coordinate2]
 ;[Output ax = (coordinate1 - coordinate2)^2]
@@ -167,18 +152,25 @@ get_sqrt:
 
 ;[ di = input address to write a random number]
 generate_random_number:
-    push bx
-    mov bx, [0x046c] ; start_state in di
-    mov [di], bl
-    pop bx
+    pusha
+    mov cx, 16
+    mov bl, [0x46c]
+    .lfrs_loop:
+        shr bl, 1
+        mov al, bl
+        and al, 0x10
+        shr al, 4
+        xor al, bl
+        mov bl, al
+        loop .lfrs_loop
+    mov [di], bl     
+    popa
     ret
 
 modify_default_colors:    
     xor cx, cx
     .loopp:
-        mov di, color_param
-        call generate_random_number
-        mov di, [color_param]
+        mov di, [0x46c]
         shr di, cl   
         and di, 0x3f
         mov al, [precomputed_sine_table + di]
@@ -281,10 +273,7 @@ section.data:
     colors: db 205, 103, 36, 60, 23, 88, 11, 255, 120, 205, 103, 36
     params_f3: dw 0x0101
     params_f4: dw 0x03a1
-
-    color_param: db 100
-
-    time_factor: db 1
-
+    time_factor: db 12
+    
 times 510 - ($ - $$) db 0
 dw 0xaa55
