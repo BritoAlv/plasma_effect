@@ -59,7 +59,7 @@ get_color:
 
     mov di, params_f4
     call .sine_wave
-    
+
     mov di, time_factor
     call generate_random_number
     ret
@@ -271,8 +271,8 @@ section.data:
     point2:                 dw 0x8C14
 
     colors: db 51, 255, 255, 255, 255, 102, 255, 51, 255, 205, 20, 36
-    params_f3: dw 0x0101
-    params_f4: dw 0x03a1
+    params_f3: dw 0x0001
+    params_f4: dw 0x0100
     time_factor: db 12
     
 times 510 - ($ - $$) db 0
