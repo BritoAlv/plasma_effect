@@ -4,11 +4,12 @@ Trying to understand how plasma effects were created and use it as an excuse to 
 
 # To use it:
 
-'''bash
+```bash
 make
 make run
-'''
+```
 
 And after press whitespace to see it running.
 
 
+![Photo](photo.png)

@@ -39,7 +39,7 @@ draw_frame:
             pop  di
             stosb
             loop pixel_loop
-            dec  dx
+            dec  dl
         jnz line_loop
     popa
     ret        
